@@ -2,27 +2,37 @@ from flask import Flask, request, render_template
 import pickle
 import numpy as np
 
-app = Flask(__name__, template_folder='../templates', static_folder='../static')
+# Initialize Flask app
+app = Flask(__name__)
 
+# Load the trained model
 Pkl_Filename = "rf_tuned.pkl" 
 with open(Pkl_Filename, 'rb') as file:  
     model = pickle.load(file)
 
+# Route for homepage
 @app.route('/')
-def hello_world():
+def home():
     return render_template('home.html')
 
-@app.route('/predict', methods=['POST', 'GET'])
+# Prediction route
+@app.route('/predict', methods=['POST'])
 def predict():
-    features = [int(x) for x in request.form.values()]
-    final = np.array(features).reshape((1, 6))
-    pred = model.predict(final)[0]
+    try:
+        features = [float(x) for x in request.form.values()]  # Ensure floats
+        final = np.array(features).reshape((1, -1))  # Dynamically reshape
+        pred = model.predict(final)[0]
 
-    if pred < 0:
-        return render_template('op.html', pred='Error calculating Amount!')
-    else:
-        return render_template('op.html', pred='Expected amount is {0:.3f}'.format(pred))
+        if pred < 0:
+            result = "Error calculating amount!"
+        else:
+            result = f"Expected amount is {pred:.3f}"
 
-# This is required for Vercel to recognize the app
+        return render_template('op.html', pred=result)
+
+    except Exception as e:
+        return render_template('op.html', pred=f"Error: {str(e)}")
+
+# Run Flask app
 if __name__ == '__main__':
     app.run(debug=True)
